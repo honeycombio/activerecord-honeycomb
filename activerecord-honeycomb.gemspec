@@ -16,8 +16,6 @@ Gem::Specification.new do |gem|
   gem.homepage = 'https://github.com/honeycombio/activerecord-honeycomb'
   gem.license = 'MIT'
 
-  gem.add_dependency 'activerecord'
-
   gem.add_development_dependency 'bump'
   gem.add_development_dependency 'rake'
   gem.add_development_dependency 'rspec'
