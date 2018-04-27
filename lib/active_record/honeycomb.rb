@@ -1,3 +1,5 @@
+require 'active_record'
+
 module ActiveRecord
   module Honeycomb
     def self.munge_config(config, client = nil)

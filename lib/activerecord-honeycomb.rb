@@ -3,7 +3,6 @@
 
 begin
   gem 'activerecord'
-  require 'active_record'
 
   require 'active_record/honeycomb'
 rescue LoadError

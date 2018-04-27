@@ -3,13 +3,14 @@
 
 begin
   gem 'honeycomb'
-  require 'honeycomb/automagic'
   gem 'activerecord'
-  require 'active_record'
 
-  require 'activerecord-honeycomb'
+  require 'honeycomb/automagic'
+  require 'active_record/honeycomb'
 
   Honeycomb.after_init :activerecord do |client|
+    require 'active_record'
+
     ActiveRecord::Base.extend(Module.new do
       define_method :establish_connection do |config, *args|
         munged_config = ActiveRecord::Honeycomb.munge_config(config, client)
