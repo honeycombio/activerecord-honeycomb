@@ -5,13 +5,22 @@ module ActiveRecord
     def honeycomb_connection(config)
       real_config = config.merge(adapter: config.fetch(:real_adapter))
 
+      if config.key?(:honeycomb_client) && config[:honeycomb_client]
+        puts "got honeycomb client"
+      end
+      client = config[:honeycomb_client]
+
       resolver = ConnectionAdapters::ConnectionSpecification::Resolver.new(Base.configurations)
       spec = resolver.spec(real_config)
 
       real_connection = ::ActiveRecord::Base.send(spec.adapter_method, spec.config)
 
       unless real_connection.class.ancestors.include? ConnectionAdapters::HoneycombAdapter
-        real_connection.class.send :include, ConnectionAdapters::HoneycombAdapter
+        real_connection.class.extend(Module.new do
+          private
+          define_method(:honeycomb_client) { client }
+        end) if client
+        real_connection.class.include ConnectionAdapters::HoneycombAdapter
       end
 
       real_connection
@@ -25,7 +34,11 @@ module ActiveRecord
         puts "#{self.name} included into #{klazz.name}"
         @_honeycomb ||= begin
           puts "HONEYCOMBING"
-          if defined?(::Honeycomb.client)
+          if klazz.respond_to? :honeycomb_client, true # include private
+            klazz.send(:honeycomb_client).tap do |klient|
+              puts "got #{klient.nil? ? :nil : :lin} from injection"
+            end
+          elsif defined?(::Honeycomb.client)
             ::Honeycomb.client.tap do |klient|
               puts "client is #{klient.nil? ? :nil : :lin}"
             end
