@@ -2,10 +2,10 @@
 # ActiveRecord.
 
 begin
-  gem 'honeycomb'
+  gem 'honeycomb-beeline'
   gem 'activerecord'
 
-  require 'honeycomb/automagic'
+  require 'honeycomb-beeline/automagic'
   require 'active_record/honeycomb'
 
   Honeycomb.after_init :activerecord do |client|
@@ -23,6 +23,6 @@ rescue Gem::LoadError => e
   when 'activerecord'
       puts 'Not autoinitialising activerecord-honeycomb'
   when 'honeycomb'
-    warn "Please ensure you `require 'activerecord-honeycomb/automagic'` *after* `require 'honeycomb/automagic'`"
+    warn "Please ensure you `require 'activerecord-honeycomb/automagic'` *after* `require 'honeycomb-beeline/automagic'`"
   end
 end
