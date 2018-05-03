@@ -6,9 +6,6 @@ module ActiveRecord
     def honeycomb_connection(config)
       real_config = config.merge(adapter: config.fetch(:real_adapter))
 
-      if config.key?(:honeycomb_client) && config[:honeycomb_client]
-        puts "got honeycomb client"
-      end
       client = config[:honeycomb_client]
 
       resolver = ConnectionAdapters::ConnectionSpecification::Resolver.new(Base.configurations)
@@ -32,17 +29,11 @@ module ActiveRecord
     module HoneycombAdapter
       def self.included(klazz)
         # TODO ugh clean this up
-        puts "#{self.name} included into #{klazz.name}"
         @_honeycomb ||= begin
-          puts "HONEYCOMBING"
           if klazz.respond_to? :honeycomb_client, true # include private
-            klazz.send(:honeycomb_client).tap do |klient|
-              puts "got #{klient.nil? ? :nil : :lin} from injection"
-            end
+            klazz.send(:honeycomb_client)
           elsif defined?(::Honeycomb.client)
-            ::Honeycomb.client.tap do |klient|
-              puts "client is #{klient.nil? ? :nil : :lin}"
-            end
+            ::Honeycomb.client
           else
             raise "Can't work without magic global Honeycomb.client at the moment"
           end
