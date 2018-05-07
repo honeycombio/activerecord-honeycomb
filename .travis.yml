@@ -1,0 +1,14 @@
+language: ruby
+rvm:
+  - 2.2
+  - 2.3
+  - 2.4
+deploy:
+  provider: rubygems
+  api_key:
+    secure: Utt5N5sOroIHXw5xWq3PVep/S7b88JPhunoNDNrTK6N3kWIY/5efsSNIcUh8Jxavf6K5vcMaYpsvryx4rpIHObXVF3qxbffUOoz3MQeC9Ghs62eYvGK3MS1BzIn+dHbNWiv/0QhD46k+mwbFMKWJO/yS1zUD/O5PCF8rUFB2aVNGcw7eyl8ArDaqZB3IZLvCHPEZX5TTKxqw/+QTMATZ+FVFs2xpup5ABny8THnUCOkd2gEu4MePo1+OerRCndKnAL30zg0DZt5031rJ/SkXdIWd0tR2gc/PwWsglHan84elimZrky0wsqpvTDJtH0lBOg/XtxpnL8dziI732dpDmdYSaaF/HKQuxpSQIAaM4bi0XT/scmT5xMQ+DpfLX1P4he7YdrYEBdtnpTKyP/mAy/jeTFP1biZES2nQ/3Ee1JPvu/v0QG/DG04IjsKpDC7J+FpRXyAEzXKhErPMr0+aPRKKsk15ZOj9FrF4ELVFkFOhavKTn6AjCdrP4oXdSONYxuSQYwUxqqBXt5rWu9aLk3yLjHa3Awx0EViT57H8w3MTVTJR98oGjTEg6isSajHIViqveAGEF51vRTn48yPHFygtp6cqtGjeMfQkBYuq4lnDqMT3U0W7RU4oSGq9cgmpF16EAzdAAPGnjaCJbBAN1DYj7KauMw8e12LJOI2H2yk=
+  gem: activerecord-honeycomb
+  on:
+    tags: true
+    repo: honeycombio/activerecord-honeycomb
+    ruby: '2.4'
