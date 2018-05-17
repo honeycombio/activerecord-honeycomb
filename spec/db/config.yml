@@ -1,0 +1,6 @@
+test:
+  adapter: postgresql
+  database: activerecord-honeycomb-test
+  user: activerecord-honeycomb-test
+  password: password
+  host: localhost
