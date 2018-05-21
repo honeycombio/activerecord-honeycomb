@@ -3,6 +3,11 @@ rvm:
   - 2.2
   - 2.3
   - 2.4
+services:
+  - postgresql
+before_script:
+  - psql -c 'CREATE DATABASE "activerecord-honeycomb-test"' -U postgres
+  - cp spec/db/config{.travis,}.yml
 deploy:
   provider: rubygems
   api_key:
