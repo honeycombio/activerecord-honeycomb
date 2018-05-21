@@ -28,4 +28,5 @@ module TestDB
 end
 
 class Animal < ActiveRecord::Base
+  validates_presence_of :species
 end

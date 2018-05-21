@@ -39,14 +39,21 @@ module ActiveRecord
           end
         end
         klazz.class_exec(@_honeycomb) do |honeycomb_|
-          define_method(:honeycomb) { honeycomb_ }
+          define_method(:builder) do
+            honeycomb_.builder.
+              add(
+                'type' => 'db',
+                'meta.package' => 'activerecord',
+                'meta.package_version' => ActiveRecord::VERSION::STRING,
+              )
+          end
         end
         super
       end
 
       def execute(sql, *args)
         sending_honeycomb_event do |event|
-          event.add_field :sql, sql
+          event.add_field 'db.sql', sql
 
           adding_span_metadata_if_available(event, :statement) do
             super
@@ -56,7 +63,8 @@ module ActiveRecord
 
       def exec_query(sql, *args)
         sending_honeycomb_event do |event|
-          event.add_field :sql, sql
+          event.add_field 'db.sql', sql
+          event.add_field 'name', query_name(sql)
 
           adding_span_metadata_if_available(event, :query) do
             super
@@ -66,24 +74,28 @@ module ActiveRecord
 
       private
       def sending_honeycomb_event
-        raise 'something went horribly wrong' unless honeycomb # TODO
-        event = honeycomb.event
+        raise 'something went horribly wrong' unless builder # TODO
+        event = builder.event
 
         start = Time.now
         yield event
       rescue Exception => e
         if event
-          event.add_field :exception_class, e.class
-          event.add_field :exception_message, e.message
+          event.add_field 'db.error', e.class.name
+          event.add_field 'db.error_detail', e.message
         end
         raise
       ensure
         if start && event
           finish = Time.now
           duration = finish - start
-          event.add_field :durationMs, duration * 1000
+          event.add_field 'duration_ms', duration * 1000
           event.send
         end
+      end
+
+      def query_name(sql)
+        sql.sub(/\s+.*/, '').upcase
       end
 
       def adding_span_metadata_if_available(event, name)
