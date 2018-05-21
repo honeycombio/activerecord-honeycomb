@@ -8,6 +8,7 @@ services:
 before_script:
   - psql -c 'CREATE DATABASE "activerecord-honeycomb-test"' -U postgres
   - cp spec/db/config{.travis,}.yml
+  - bundle exec rake spec:db:load_schema
 deploy:
   provider: rubygems
   api_key:
