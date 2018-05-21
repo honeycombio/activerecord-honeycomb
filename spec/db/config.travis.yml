@@ -1,6 +1,0 @@
-# .travis.yml copies this over the top of config.yml to configure appropriate
-# credentials for accessing the database instance provided by TravisCI.
-
-test:
-  adapter: postgresql
-  database: activerecord-honeycomb-test

@@ -6,7 +6,6 @@ rvm:
 services:
   - postgresql
 before_script:
-  - cp spec/db/config{.travis,}.yml
   - bundle exec rake spec:db:create
   - bundle exec rake spec:db:load_schema
 deploy:
