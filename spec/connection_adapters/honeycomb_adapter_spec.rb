@@ -32,6 +32,8 @@ end
 RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
   let(:last_event) { $fakehoney.events.last }
 
+  after { $fakehoney.reset }
+
   context 'after a .create!' do
     before { Animal.create! name: 'Max', species: 'Lion' }
 
