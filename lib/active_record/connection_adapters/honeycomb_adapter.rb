@@ -103,7 +103,7 @@ module ActiveRecord
 
         trace_id = ::Honeycomb.trace_id
 
-        event.add_field 'trace.id', trace_id if trace_id
+        event.add_field 'trace.trace_id', trace_id if trace_id
         span_id = SecureRandom.uuid
         event.add_field 'trace.span_id', span_id
 
