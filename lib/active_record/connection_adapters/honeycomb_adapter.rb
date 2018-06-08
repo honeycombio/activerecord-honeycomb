@@ -4,20 +4,24 @@ require 'securerandom'
 module ActiveRecord
   module ConnectionHandling
     def honeycomb_connection(config)
+      log_prefix = "ActiveRecord::ConnectionHandling#honeycomb_connection"
+
       real_config = config.merge(adapter: config.fetch(:real_adapter))
 
-      client = config[:honeycomb_client]
+      logger = config[:honeycomb_logger]
+      logger ||= ::Honeycomb.logger if defined?(::Honeycomb.logger)
+      ConnectionAdapters::HoneycombAdapter.logger ||= logger
 
+      ConnectionAdapters::HoneycombAdapter.client ||= config[:honeycomb_client]
+
+      logger.debug "#{log_prefix} resolving real database config" if logger
       resolver = ConnectionAdapters::ConnectionSpecification::Resolver.new(Base.configurations)
       spec = resolver.spec(real_config)
 
       real_connection = ::ActiveRecord::Base.send(spec.adapter_method, spec.config)
+      logger.debug "#{log_prefix} obtained real database connection: #{real_connection.class.name}" if logger
 
       unless real_connection.class.ancestors.include? ConnectionAdapters::HoneycombAdapter
-        real_connection.class.extend(Module.new do
-          private
-          define_method(:honeycomb_client) { client }
-        end) if client
         real_connection.class.include ConnectionAdapters::HoneycombAdapter
       end
 
@@ -27,29 +31,39 @@ module ActiveRecord
 
   module ConnectionAdapters
     module HoneycombAdapter
-      def self.included(klazz)
-        # TODO ugh clean this up
-        @_honeycomb ||= begin
-          if klazz.respond_to? :honeycomb_client, true # include private
-            klazz.send(:honeycomb_client)
+      class << self
+        attr_accessor :client
+        attr_reader :builder
+        attr_accessor :logger
+
+        def included(klazz)
+          debug "included into #{klazz.name}"
+
+          if @client
+            debug "configured with #{@client.class.name}"
           elsif defined?(::Honeycomb.client)
-            ::Honeycomb.client
+            debug "initialized with #{::Honeycomb.client.class.name} from honeycomb-beeline"
+            @client = ::Honeycomb.client
           else
-            raise "Can't work without magic global Honeycomb.client at the moment"
+            raise "Please ensure your database config sets :honeycomb_client in order to use #{self.name} (try ActiveRecord::Honeycomb.munge_config)"
           end
+
+          @builder = @client.builder.add(
+            'type' => 'db',
+            'meta.package' => 'activerecord',
+            'meta.package_version' => ActiveRecord::VERSION::STRING,
+          )
+
+          super
         end
-        klazz.class_exec(@_honeycomb) do |honeycomb_|
-          define_method(:builder) do
-            honeycomb_.builder.
-              add(
-                'type' => 'db',
-                'meta.package' => 'activerecord',
-                'meta.package_version' => ActiveRecord::VERSION::STRING,
-              )
-          end
+
+        private
+        def debug(msg)
+          @logger.debug("#{self.name}: #{msg}") if @logger
         end
-        super
       end
+
+      delegate :builder, to: self
 
       def execute(sql, *args)
         sending_honeycomb_event do |event|
@@ -74,7 +88,6 @@ module ActiveRecord
 
       private
       def sending_honeycomb_event
-        raise 'something went horribly wrong' unless builder # TODO
         event = builder.event
 
         start = Time.now

@@ -2,9 +2,12 @@ module ActiveRecord
   module Honeycomb
     module AutoInstall
       class << self
-        def available?(**_)
+        def available?(logger: nil)
           gem 'activerecord'
-        rescue Gem::LoadError
+          logger.debug "#{self.name}: detected ActiveRecord, okay to autoinitialise" if logger
+          true
+        rescue Gem::LoadError => e
+          logger.debug "Didn't detect ActiveRecord (#{e.class}: #{e.message}), not autoinitialising activerecord-honeycomb" if logger
           false
         end
 

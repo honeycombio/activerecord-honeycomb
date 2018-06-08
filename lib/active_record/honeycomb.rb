@@ -9,6 +9,7 @@ module ActiveRecord
       )
       munged['honeycomb_client'] = client if client
       munged['honeycomb_logger'] = logger if logger
+      logger.debug "#{self.name}: injected HoneycombAdapter config, original adapter was #{munged['real_adapter'].inspect}" if logger
       munged
     end
   end
