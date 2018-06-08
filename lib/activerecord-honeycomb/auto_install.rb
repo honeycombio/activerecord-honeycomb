@@ -16,9 +16,9 @@ module ActiveRecord
           require 'activerecord-honeycomb'
 
           ActiveRecord::Base.extend(Module.new do
-            define_method :establish_connection do |config, *args|
+            define_method :establish_connection do |config=nil|
               munged_config = ActiveRecord::Honeycomb.munge_config(config, client: honeycomb_client, logger: logger)
-              super(munged_config, *args)
+              super(munged_config)
             end
           end)
         end
