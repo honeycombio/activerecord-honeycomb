@@ -12,7 +12,7 @@ Gem::Specification.new do |gem|
   DESC
 
   gem.authors = ['Sam Stokes']
-  gem.email = %w(sam@honeycomb.io)
+  gem.email = %w(support@honeycomb.io)
   gem.homepage = 'https://github.com/honeycombio/activerecord-honeycomb'
   gem.license = 'MIT'
 
