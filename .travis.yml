@@ -6,6 +6,9 @@ rvm:
 env:
   - DB_ADAPTER=postgresql
   - DB_ADAPTER=mysql2
+gemfile:
+  - Gemfile
+  - Gemfile.ar4.rb
 services:
   - mysql
   - postgresql
