@@ -67,50 +67,44 @@ module ActiveRecord
 
       delegate :builder, to: self
 
-      def execute(sql, *args)
-        sending_honeycomb_event do |event|
-          event.add_field 'db.sql', sql
-
-          adding_span_metadata_if_available(event, :statement) do
+      def execute(sql, name = nil, *args)
+        sending_honeycomb_event(sql, name) do |event|
+          adding_span_metadata_if_available(event) do
             super
           end
         end
       end
 
-      def exec_query(sql, *args)
-        sending_honeycomb_event do |event|
-          event.add_field 'db.sql', sql
-          event.add_field 'name', query_name(sql)
-
-          adding_span_metadata_if_available(event, :query) do
+      def exec_query(sql, name = 'SQL', *args)
+        sending_honeycomb_event(sql, name) do |event|
+          adding_span_metadata_if_available(event) do
             super
           end
         end
       end
 
-      def exec_delete(sql, *args, &block)
-        sending_honeycomb_event do |event|
-          event.add_field 'db.sql', sql
-          event.add_field 'name', query_name(sql) # TODO
-          adding_span_metadata_if_available(event, :delete) do
+      def exec_delete(sql, name, *args)
+        sending_honeycomb_event(sql, name) do |event|
+          adding_span_metadata_if_available(event) do
             super
           end
         end
       end
 
-      def exec_update(sql, *args, &block)
-        sending_honeycomb_event do |event|
-          event.add_field 'db.sql', sql
-          event.add_field 'name', query_name(sql) # TODO
-          adding_span_metadata_if_available(event, :update) do
+      def exec_update(sql, name, *args)
+        sending_honeycomb_event(sql, name) do |event|
+          adding_span_metadata_if_available(event) do
             super
           end
         end
       end
 
       private
-      def sending_honeycomb_event
+      def sending_honeycomb_event(sql, name)
         event = builder.event
+
+        event.add_field 'db.sql', sql
+        event.add_field 'name', name || query_name(sql)
 
         start = Time.now
         yield event
@@ -133,7 +127,7 @@ module ActiveRecord
         sql.sub(/\s+.*/, '').upcase
       end
 
-      def adding_span_metadata_if_available(event, name)
+      def adding_span_metadata_if_available(event)
         return yield unless defined?(::Honeycomb.trace_id)
 
         trace_id = ::Honeycomb.trace_id

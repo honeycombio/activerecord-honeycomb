@@ -3,7 +3,7 @@ RSpec.shared_examples_for 'records a database query' do |name:, sql_match:, sql_
     expect(last_event.data['type']).to eq('db')
   end
 
-  it "sets 'name' to #{name.inspect} (although something more informative would be nicer!)" do
+  it "sets 'name' to #{name.inspect}" do
     expect(last_event.data['name']).to eq(name)
   end
 
@@ -34,7 +34,7 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
     before { Animal.create! name: 'Max', species: 'Lion' }
 
     include_examples 'records a database query',
-      name: 'INSERT',
+      name: 'Animal Create',
       sql_match: /^INSERT INTO "animals"/,
       sql_not_match: /Lion/
   end
@@ -46,7 +46,7 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
     end
 
     include_examples 'records a database query',
-      name: 'SELECT',
+      name: 'Animal Load',
       sql_match: /^SELECT .* FROM "animals"/,
       sql_not_match: /Bear/
 
@@ -65,7 +65,7 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
     end
 
     include_examples 'records a database query',
-      name: 'UPDATE',
+      name: 'Animal Update',
       sql_match: /^UPDATE "animals"/,
       sql_not_match: /Loxley/
   end
@@ -77,7 +77,7 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
     end
 
     include_examples 'records a database query',
-      name: 'DELETE',
+      name: 'Animal Destroy',
       sql_match: /^DELETE FROM "animals"/
   end
 
