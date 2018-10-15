@@ -88,6 +88,26 @@ module ActiveRecord
         end
       end
 
+      def exec_delete(sql, *args, &block)
+        sending_honeycomb_event do |event|
+          event.add_field 'db.sql', sql
+          event.add_field 'name', query_name(sql) # TODO
+          adding_span_metadata_if_available(event, :delete) do
+            super
+          end
+        end
+      end
+
+      def exec_update(sql, *args, &block)
+        sending_honeycomb_event do |event|
+          event.add_field 'db.sql', sql
+          event.add_field 'name', query_name(sql) # TODO
+          adding_span_metadata_if_available(event, :update) do
+            super
+          end
+        end
+      end
+
       private
       def sending_honeycomb_event
         event = builder.event

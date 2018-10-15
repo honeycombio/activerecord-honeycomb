@@ -64,14 +64,10 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
       @robin.save!
     end
 
-    it 'records a database query' do
-      pending 'need to hook in at a different level (ActiveRecord::ConnectionAdapters::DatabaseStatements#exec_update)'
-      fail "doesn't send events for UPDATE"
-
-      #name: 'UPDATE',
-      #sql_match: /^UPDATE "animals"/,
-      #sql_not_match: /Loxley/
-    end
+    include_examples 'records a database query',
+      name: 'UPDATE',
+      sql_match: /^UPDATE "animals"/,
+      sql_not_match: /Loxley/
   end
 
   context 'after a delete' do
@@ -80,13 +76,9 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
       @robin.destroy!
     end
 
-    it 'records a database query' do
-      pending 'need to hook in at a different level (ActiveRecord::ConnectionAdapters::DatabaseStatements#exec_delete)'
-      fail "doesn't send events for DELETE"
-
-      #name: 'DELETE',
-      #sql_match: /^DELETE FROM "animals"/
-    end
+    include_examples 'records a database query',
+      name: 'DELETE',
+      sql_match: /^DELETE FROM "animals"/
   end
 
   context 'if ActiveRecord raises an error' do
