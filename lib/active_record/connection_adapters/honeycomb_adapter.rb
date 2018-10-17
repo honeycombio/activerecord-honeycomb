@@ -21,7 +21,9 @@ module ActiveRecord
       real_connection = ::ActiveRecord::Base.send(spec.adapter_method, spec.config)
       logger.debug "#{log_prefix} obtained real database connection: #{real_connection.class.name}" if logger
 
-      unless real_connection.class.ancestors.include? ConnectionAdapters::HoneycombAdapter
+      if real_connection.class.ancestors.include? ConnectionAdapters::HoneycombAdapter
+        logger.debug "#{log_prefix} found #{real_connection.class} with #{ConnectionAdapters::HoneycombAdapter} already included"
+      else
         real_connection.class.include ConnectionAdapters::HoneycombAdapter
       end
 
