@@ -1,5 +1,3 @@
-require 'support/fakehoney'
-
 RSpec.shared_examples_for 'records a database query' do |name:, sql_match:, sql_not_match: nil|
   it 'sends a db event' do
     expect(last_event.data['type']).to eq('db')
@@ -31,8 +29,6 @@ end
 
 RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
   let(:last_event) { $fakehoney.events.last }
-
-  after { $fakehoney.reset }
 
   context 'after a .create!' do
     before { Animal.create! name: 'Max', species: 'Lion' }
@@ -96,11 +92,11 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
   context 'if ActiveRecord raises an error' do
     before do
       expect { Animal.create! }.to raise_error(ActiveRecord::RecordInvalid)
+
+      pending 'need to hook in at a different level'
     end
 
     it 'records the exception' do
-      pending 'need to hook in at a different level'
-
       expect(last_event.data).to include(
         'db.error' => 'ActiveRecord::RecordInvalid',
         'db.error_detail' => /TODO/,

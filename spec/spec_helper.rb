@@ -1,4 +1,5 @@
 require 'support/db'
+require 'support/fakehoney'
 
 RSpec.configure do |config|
   config.before(:suite) do
@@ -10,9 +11,11 @@ RSpec.configure do |config|
 
   config.before(:example) do
     ActiveRecord::Base.connection.begin_transaction
+    $fakehoney.reset # hide the BEGIN event
   end
   config.after(:example) do
     ActiveRecord::Base.connection.rollback_transaction
+    $fakehoney.reset
   end
 
   config.expect_with :rspec do |expectations|
