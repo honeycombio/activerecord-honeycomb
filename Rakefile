@@ -22,12 +22,12 @@ namespace :spec do
       ActiveRecord::Base.configurations = db_config
     end
 
-    desc 'Create the test database file'
+    desc 'Create the test database'
     task create: :config do
       DatabaseTasks.create_current
     end
 
-    desc 'Delete the test database file'
+    desc 'Delete the test database'
     task drop: :config do
       DatabaseTasks.drop_current
     end
