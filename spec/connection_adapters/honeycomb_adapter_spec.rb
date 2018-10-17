@@ -1,4 +1,4 @@
-RSpec.shared_examples_for 'records a database query' do |name:, preceding_events: 0, sql_match:, sql_not_match: nil|
+RSpec.shared_examples_for 'records a database query' do |name:, preceding_events: 0, sql_match:, table:, sql_not_match: nil|
   it 'sends a db event' do
     expect(last_event.data['type']).to eq('db')
   end
@@ -12,7 +12,10 @@ RSpec.shared_examples_for 'records a database query' do |name:, preceding_events
   end
 
   it 'records the SQL query' do
-    expect(last_event.data).to include('db.sql' => sql_match)
+    expect(last_event.data).to include('db.sql')
+    sql = last_event.data['db.sql']
+    expect(sql).to match(sql_match)
+    expect(sql).to include(quote_table_name(table))
   end
 
   it 'records the parameterised SQL query rather than the literal parameter values' do
@@ -43,7 +46,8 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
 
     include_examples 'records a database query',
       name: 'Animal Create',
-      sql_match: /^INSERT INTO "animals"/,
+      sql_match: /^INSERT INTO /,
+      table: :animals,
       sql_not_match: /Lion/
   end
 
@@ -56,7 +60,8 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
     include_examples 'records a database query',
       name: 'Animal Load',
       preceding_events: 1,
-      sql_match: /^SELECT .* FROM "animals"/,
+      sql_match: /^SELECT .* FROM /,
+      table: :animals,
       sql_not_match: /Bear/
 
     it 'records how many records were returned' do
@@ -76,7 +81,8 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
     include_examples 'records a database query',
       name: 'Animal Update',
       preceding_events: 1,
-      sql_match: /^UPDATE "animals"/,
+      sql_match: /^UPDATE /,
+      table: :animals,
       sql_not_match: /Loxley/
   end
 
@@ -89,7 +95,8 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
     include_examples 'records a database query',
       name: 'Animal Destroy',
       preceding_events: 1,
-      sql_match: /^DELETE FROM "animals"/
+      sql_match: /^DELETE FROM /,
+      table: :animals
   end
 
   context 'if ActiveRecord raises an error' do

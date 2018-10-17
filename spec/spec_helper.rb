@@ -1,5 +1,6 @@
 require 'support/db'
 require 'support/fakehoney'
+require 'support/database_helpers'
 
 RSpec.configure do |config|
   config.before(:suite) do
@@ -17,6 +18,8 @@ RSpec.configure do |config|
     ActiveRecord::Base.connection.rollback_transaction
     $fakehoney.reset
   end
+
+  config.include DatabaseHelpers
 
   config.expect_with :rspec do |expectations|
     # This option will default to `true` in RSpec 4. It makes the `description`
