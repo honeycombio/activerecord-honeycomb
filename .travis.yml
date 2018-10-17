@@ -3,7 +3,12 @@ rvm:
   - 2.2
   - 2.3
   - 2.4
+env:
+  - DB_ADAPTER=postgresql
+  - DB_ADAPTER=mysql2
+  - DB_ADAPTER=sqlite3
 services:
+  - mysql
   - postgresql
 before_script:
   - bundle exec rake spec:db:create
