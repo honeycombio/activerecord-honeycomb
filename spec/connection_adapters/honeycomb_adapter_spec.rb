@@ -1,6 +1,10 @@
-RSpec.shared_examples_for 'records a database query' do |name:, sql_match:, sql_not_match: nil|
+RSpec.shared_examples_for 'records a database query' do |name:, preceding_events: 0, sql_match:, sql_not_match: nil|
   it 'sends a db event' do
     expect(last_event.data['type']).to eq('db')
+  end
+
+  it 'sends just one event' do
+    expect($fakehoney.events.size).to eq(preceding_events + 1)
   end
 
   it "sets 'name' to #{name.inspect}" do
@@ -28,7 +32,11 @@ RSpec.shared_examples_for 'records a database query' do |name:, sql_match:, sql_
 end
 
 RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
-  let(:last_event) { $fakehoney.events.last }
+  let(:last_event) do
+    event = $fakehoney.events.last
+    expect(event).to_not be_nil
+    event
+  end
 
   context 'after a .create!' do
     before { Animal.create! name: 'Max', species: 'Lion' }
@@ -47,6 +55,7 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
 
     include_examples 'records a database query',
       name: 'Animal Load',
+      preceding_events: 1,
       sql_match: /^SELECT .* FROM "animals"/,
       sql_not_match: /Bear/
 
@@ -66,6 +75,7 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
 
     include_examples 'records a database query',
       name: 'Animal Update',
+      preceding_events: 1,
       sql_match: /^UPDATE "animals"/,
       sql_not_match: /Loxley/
   end
@@ -78,6 +88,7 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
 
     include_examples 'records a database query',
       name: 'Animal Destroy',
+      preceding_events: 1,
       sql_match: /^DELETE FROM "animals"/
   end
 
