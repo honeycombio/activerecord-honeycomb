@@ -68,31 +68,31 @@ module ActiveRecord
       delegate :builder, to: self
 
       def execute(sql, name = nil, *args)
-        sending_honeycomb_event(sql, name) do |event|
+        sending_honeycomb_event(sql, name, []) do |event|
           adding_span_metadata_if_available(event) do
             super
           end
         end
       end
 
-      def exec_query(sql, name = 'SQL', *args)
-        sending_honeycomb_event(sql, name) do |event|
+      def exec_query(sql, name = 'SQL', binds = [], *args)
+        sending_honeycomb_event(sql, name, binds) do |event|
           adding_span_metadata_if_available(event) do
             super
           end
         end
       end
 
-      def exec_delete(sql, name, *args)
-        sending_honeycomb_event(sql, name) do |event|
+      def exec_delete(sql, name, binds = [], *args)
+        sending_honeycomb_event(sql, name, binds) do |event|
           adding_span_metadata_if_available(event) do
             super
           end
         end
       end
 
-      def exec_update(sql, name, *args)
-        sending_honeycomb_event(sql, name) do |event|
+      def exec_update(sql, name, binds = [], *args)
+        sending_honeycomb_event(sql, name, binds) do |event|
           adding_span_metadata_if_available(event) do
             super
           end
@@ -100,7 +100,7 @@ module ActiveRecord
       end
 
       private
-      def sending_honeycomb_event(sql, name)
+      def sending_honeycomb_event(sql, name, binds)
         # Some adapters have some of their exec* methods call each other,
         # e.g mysql2 has exec_query call execute (via execute_and_free).
         # We don't want to send two events for the same query, so we screen out
@@ -114,6 +114,10 @@ module ActiveRecord
 
           event.add_field 'db.sql', sql
           event.add_field 'name', name || query_name(sql)
+
+          binds.each do |bind|
+            event.add_field "db.params.#{bind.name}", bind.value
+          end
 
           start = Time.now
         else

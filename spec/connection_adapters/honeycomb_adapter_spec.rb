@@ -1,4 +1,4 @@
-RSpec.shared_examples_for 'records a database query' do |name:, preceding_events: 0, sql_match:, table:, sql_not_match: nil|
+RSpec.shared_examples_for 'records a database query' do |name:, preceding_events: 0, sql_match:, table:, sql_not_match: nil, binds: {}|
   it 'sends a db event' do
     expect(last_event.data['type']).to eq('db')
   end
@@ -22,6 +22,19 @@ RSpec.shared_examples_for 'records a database query' do |name:, preceding_events
   it 'records the parameterised SQL query rather than the literal parameter values' do
     expect(last_event.data['db.sql']).to_not match(sql_not_match)
   end if sql_not_match
+
+  it 'records the bound parameter values too' do
+    param_fields = binds.map do |param, value|
+      value = case value
+              when Symbol
+                instance_variable_get(value)
+              else
+                value
+              end
+      ["db.params.#{param}", value]
+    end.to_h
+    expect(last_event.data).to include(param_fields)
+  end unless binds.empty?
 
   it 'records how long the statement took' do
     expect(last_event.data['duration_ms']).to be_a Numeric
@@ -59,7 +72,8 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
       name: 'Animal Create',
       sql_match: /^INSERT INTO /,
       table: :animals,
-      sql_not_match: /Lion/
+      sql_not_match: /Lion/,
+      binds: {name: 'Max', species: 'Lion'}
   end
 
   context 'after a .find' do
@@ -73,7 +87,8 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
       preceding_events: 1,
       sql_match: /^SELECT .* FROM /,
       table: :animals,
-      sql_not_match: /Bear/
+      sql_not_match: /Bear/,
+      binds: {species: 'Bear'}
 
     it 'records how many records were returned' do
       pending 'depends on underlying adapter API?'
@@ -85,6 +100,7 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
   context 'after an update' do
     before do
       @robin = Animal.create! name: 'Robin Hood', species: 'Fox'
+      @robin_id = @robin.id
       @robin.name = 'Sir Robert of Loxley'
       @robin.save!
     end
@@ -94,12 +110,14 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
       preceding_events: 1,
       sql_match: /^UPDATE /,
       table: :animals,
-      sql_not_match: /Loxley/
+      sql_not_match: /Loxley/,
+      binds: {id: :@robin_id, name: 'Sir Robert of Loxley'}
   end
 
   context 'after a delete' do
     before do
       @robin = Animal.create! name: 'Robin Hood', species: 'Fox'
+      @robin_id = @robin.id
       @robin.destroy!
     end
 
@@ -107,7 +125,8 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
       name: 'Animal Destroy',
       preceding_events: 1,
       sql_match: /^DELETE FROM /,
-      table: :animals
+      table: :animals,
+      binds: {id: :@robin_id}
   end
 
   context 'if ActiveRecord raises an error' do
