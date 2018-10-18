@@ -6,7 +6,6 @@ rvm:
 env:
   - DB_ADAPTER=postgresql
   - DB_ADAPTER=mysql2
-  - DB_ADAPTER=sqlite3
 services:
   - mysql
   - postgresql
