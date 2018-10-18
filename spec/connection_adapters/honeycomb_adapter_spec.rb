@@ -4,7 +4,8 @@ RSpec.shared_examples_for 'records a database query' do |name:, preceding_events
   end
 
   it 'sends just one event' do
-    expect($fakehoney.events.size).to eq(preceding_events + 1)
+    expect($fakehoney.events.size).to eq(preceding_events + 1),
+      "expected exactly one event, got: #{$fakehoney.events.drop(preceding_events).map {|event| event.data['name'] }.join(', ')}"
   end
 
   it "sets 'name' to #{name.inspect}" do
@@ -39,6 +40,16 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
     event = $fakehoney.events.last
     expect(event).to_not be_nil
     event
+  end
+
+  before :all do
+    # For the first query, ActiveRecord fires off some extra "pre-flight"
+    # queries to discover the DB schema, and our instrumentation will pick those
+    # up. That's not really what we're testing for though, and this will fail
+    # our "sent exactly one event" tests if one of those happens to run first.
+    #
+    # Instead let's force the pre-flight before any tests run.
+    _ = Animal.first
   end
 
   context 'after a .create!' do
