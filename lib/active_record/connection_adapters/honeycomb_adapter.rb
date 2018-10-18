@@ -101,12 +101,25 @@ module ActiveRecord
 
       private
       def sending_honeycomb_event(sql, name)
-        event = builder.event
+        # Some adapters have some of their exec* methods call each other,
+        # e.g mysql2 has exec_query call execute (via execute_and_free).
+        # We don't want to send two events for the same query, so we screen out
+        # multiple invocations of this wrapper method in the same call tree.
+        if !defined?(@honeycomb_event_depth)
+          @honeycomb_event_depth = 0
+        end
+        if @honeycomb_event_depth < 1
+          @honeycomb_event_depth = 1
+          event = builder.event
 
-        event.add_field 'db.sql', sql
-        event.add_field 'name', name || query_name(sql)
+          event.add_field 'db.sql', sql
+          event.add_field 'name', name || query_name(sql)
 
-        start = Time.now
+          start = Time.now
+        else
+          @honeycomb_event_depth += 1
+        end
+
         yield event
       rescue Exception => e
         if event
@@ -115,6 +128,7 @@ module ActiveRecord
         end
         raise
       ensure
+        @honeycomb_event_depth -= 1
         if start && event
           finish = Time.now
           duration = finish - start
@@ -128,7 +142,7 @@ module ActiveRecord
       end
 
       def adding_span_metadata_if_available(event)
-        return yield unless defined?(::Honeycomb.trace_id)
+        return yield unless event && defined?(::Honeycomb.trace_id)
 
         trace_id = ::Honeycomb.trace_id
 
