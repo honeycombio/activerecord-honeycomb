@@ -1,0 +1,3 @@
+test:
+  adapter: sqlite3
+  database: spec/db/activerecord-honeycomb-test.sqlite3

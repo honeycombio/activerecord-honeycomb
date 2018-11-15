@@ -24,7 +24,7 @@ module ActiveRecord
       if real_connection.class.ancestors.include? ConnectionAdapters::HoneycombAdapter
         logger.debug "#{log_prefix} found #{real_connection.class} with #{ConnectionAdapters::HoneycombAdapter} already included"
       else
-        real_connection.class.include ConnectionAdapters::HoneycombAdapter
+        real_connection.class.prepend ConnectionAdapters::HoneycombAdapter
       end
 
       real_connection
@@ -38,7 +38,7 @@ module ActiveRecord
         attr_reader :builder
         attr_accessor :logger
 
-        def included(klazz)
+        def prepended(klazz)
           debug "included into #{klazz.name}"
 
           if @client
