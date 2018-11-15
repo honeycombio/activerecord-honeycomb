@@ -28,7 +28,11 @@ module TestDB
     end
 
     def disconnect
-      @connection_pool.disconnect
+      if @connection_pool.respond_to? :disconnect
+        @connection_pool.disconnect
+      elsif @connection_pool.respond_to? :disconnect!
+        @connection_pool.disconnect!
+      end
     end
   end
 end
