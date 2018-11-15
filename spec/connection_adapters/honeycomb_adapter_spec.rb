@@ -20,10 +20,16 @@ RSpec.shared_examples_for 'records a database query' do |name:, preceding_events
   end
 
   it 'records the parameterised SQL query rather than the literal parameter values' do
+    if ActiveRecord.version < Gem::Version.new("5")
+      pending 'depends on underlying adapter API?'
+    end
     expect(last_event.data['db.sql']).to_not match(sql_not_match)
   end if sql_not_match
 
   it 'records the bound parameter values too' do
+    if ActiveRecord.version < Gem::Version.new("5")
+      pending 'depends on underlying adapter API?'
+    end
     param_fields = binds.map do |param, value|
       value = case value
               when Symbol
