@@ -7,6 +7,9 @@ env:
   - DB_ADAPTER=postgresql
   - DB_ADAPTER=mysql2
   - DB_ADAPTER=sqlite3
+gemfile:
+  - Gemfile
+  - Gemfile.activerecord4.rb
 services:
   - mysql
   - postgresql
