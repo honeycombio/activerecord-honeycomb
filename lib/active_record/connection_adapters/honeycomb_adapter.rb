@@ -116,7 +116,13 @@ module ActiveRecord
           event.add_field 'name', name || query_name(sql)
 
           binds.each do |bind|
-            event.add_field "db.params.#{bind.name}", bind.value
+            # ActiveRecord 5
+            if bind.respond_to?(:value) && bind.respond_to?(:name)
+              event.add_field "db.params.#{bind.name}", bind.value
+            else # ActiveRecord 4
+              column, value = bind
+              event.add_field "db.params.#{column.name}", value
+            end
           end
 
           start = Time.now
