@@ -11,7 +11,7 @@ RSpec.shared_examples_for 'records a database query' do |name:, preceding_events
   it "sets 'name' to #{name.inspect}" do
     # certain adapters and versions of active record will populate the name as
     # expected. It should at least containt "SQL" as a fallback
-    expect(last_event.data['name']).to be_in([name, "SQL"])
+    expect(last_event.data['name']).to eq(name).or eq("SQL")
   end
 
   it 'records the SQL query' do
