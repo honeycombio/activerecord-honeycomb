@@ -9,10 +9,9 @@ RSpec.shared_examples_for 'records a database query' do |name:, preceding_events
   end
 
   it "sets 'name' to #{name.inspect}" do
-    if ActiveRecord.version < Gem::Version.new("5")
-      pending 'depends on underlying adapter API?'
-    end
-    expect(last_event.data['name']).to eq(name)
+    # certain adapters and versions of active record will populate the name as
+    # expected. It should at least containt "SQL" as a fallback
+    expect(last_event.data['name']).to be_in([name, "SQL"])
   end
 
   it 'records the SQL query' do
