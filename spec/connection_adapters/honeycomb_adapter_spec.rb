@@ -1,21 +1,45 @@
-require 'support/fakehoney'
-
-RSpec.shared_examples_for 'records a database query' do |name:, sql_match:, sql_not_match: nil|
+RSpec.shared_examples_for 'records a database query' do |name:, preceding_events: 0, sql_match:, table:, sql_not_match: nil, binds: {}|
   it 'sends a db event' do
     expect(last_event.data['type']).to eq('db')
   end
 
-  it "sets 'name' to #{name.inspect} (although something more informative would be nicer!)" do
-    expect(last_event.data['name']).to eq(name)
+  it 'sends just one event' do
+    expect($fakehoney.events.size).to eq(preceding_events + 1),
+      "expected exactly one event, got: #{$fakehoney.events.drop(preceding_events).map {|event| event.data['name'] }.join(', ')}"
+  end
+
+  it "sets 'name' to #{name.inspect}" do
+    # certain adapters and versions of active record will populate the name as
+    # expected. It should at least containt "SQL" as a fallback
+    expect(last_event.data['name']).to eq(name).or eq("SQL")
   end
 
   it 'records the SQL query' do
-    expect(last_event.data).to include('db.sql' => sql_match)
+    expect(last_event.data).to include('db.sql')
+    sql = last_event.data['db.sql']
+    expect(sql).to match(sql_match)
+    expect(sql).to include(quote_table_name(table))
   end
 
-  it 'records the parameterised SQL query rather than the literal parameter values' do
-    expect(last_event.data['db.sql']).to_not match(sql_not_match)
-  end if sql_not_match
+  # active record 4 and mysql doesn't support parameterised queries
+  unless ENV["DB_ADAPTER"] == "mysql2" && ActiveRecord.version < Gem::Version.new("5")
+    it 'records the parameterised SQL query rather than the literal parameter values' do
+      expect(last_event.data['db.sql']).to_not match(sql_not_match)
+    end if sql_not_match
+  end
+
+  it 'records the bound parameter values too' do
+    param_fields = binds.map do |param, value|
+      value = case value
+              when Symbol
+                instance_variable_get(value)
+              else
+                value
+              end
+      ["db.params.#{param}", value]
+    end.to_h
+    expect(last_event.data).to include(param_fields)
+  end unless binds.empty?
 
   it 'records how long the statement took' do
     expect(last_event.data['duration_ms']).to be_a Numeric
@@ -30,17 +54,31 @@ RSpec.shared_examples_for 'records a database query' do |name:, sql_match:, sql_
 end
 
 RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
-  let(:last_event) { $fakehoney.events.last }
+  let(:last_event) do
+    event = $fakehoney.events.last
+    expect(event).to_not be_nil
+    event
+  end
 
-  after { $fakehoney.reset }
+  before :all do
+    # For the first query, ActiveRecord fires off some extra "pre-flight"
+    # queries to discover the DB schema, and our instrumentation will pick those
+    # up. That's not really what we're testing for though, and this will fail
+    # our "sent exactly one event" tests if one of those happens to run first.
+    #
+    # Instead let's force the pre-flight before any tests run.
+    _ = Animal.first
+  end
 
   context 'after a .create!' do
     before { Animal.create! name: 'Max', species: 'Lion' }
 
     include_examples 'records a database query',
-      name: 'INSERT',
-      sql_match: /^INSERT INTO "animals"/,
-      sql_not_match: /Lion/
+      name: 'Animal Create',
+      sql_match: /^INSERT INTO /,
+      table: :animals,
+      sql_not_match: /Lion/,
+      binds: {name: 'Max', species: 'Lion'}
   end
 
   context 'after a .find' do
@@ -50,9 +88,12 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
     end
 
     include_examples 'records a database query',
-      name: 'SELECT',
-      sql_match: /^SELECT .* FROM "animals"/,
-      sql_not_match: /Bear/
+      name: 'Animal Load',
+      preceding_events: 1,
+      sql_match: /^SELECT .* FROM /,
+      table: :animals,
+      sql_not_match: /Bear/,
+      binds: {species: 'Bear'}
 
     it 'records how many records were returned' do
       pending 'depends on underlying adapter API?'
@@ -64,43 +105,43 @@ RSpec.describe 'ActiveRecord::ConnectionAdapters::HoneycombAdapter' do
   context 'after an update' do
     before do
       @robin = Animal.create! name: 'Robin Hood', species: 'Fox'
+      @robin_id = @robin.id
       @robin.name = 'Sir Robert of Loxley'
       @robin.save!
     end
 
-    it 'records a database query' do
-      pending 'need to hook in at a different level (ActiveRecord::ConnectionAdapters::DatabaseStatements#exec_update)'
-      fail "doesn't send events for UPDATE"
-
-      #name: 'UPDATE',
-      #sql_match: /^UPDATE "animals"/,
-      #sql_not_match: /Loxley/
-    end
+    include_examples 'records a database query',
+      name: 'Animal Update',
+      preceding_events: 1,
+      sql_match: /^UPDATE /,
+      table: :animals,
+      sql_not_match: /Loxley/,
+      binds: {id: :@robin_id, name: 'Sir Robert of Loxley'}
   end
 
   context 'after a delete' do
     before do
       @robin = Animal.create! name: 'Robin Hood', species: 'Fox'
+      @robin_id = @robin.id
       @robin.destroy!
     end
 
-    it 'records a database query' do
-      pending 'need to hook in at a different level (ActiveRecord::ConnectionAdapters::DatabaseStatements#exec_delete)'
-      fail "doesn't send events for DELETE"
-
-      #name: 'DELETE',
-      #sql_match: /^DELETE FROM "animals"/
-    end
+    include_examples 'records a database query',
+      name: 'Animal Destroy',
+      preceding_events: 1,
+      sql_match: /^DELETE FROM /,
+      table: :animals,
+      binds: {id: :@robin_id}
   end
 
   context 'if ActiveRecord raises an error' do
     before do
       expect { Animal.create! }.to raise_error(ActiveRecord::RecordInvalid)
+
+      pending 'need to hook in at a different level'
     end
 
     it 'records the exception' do
-      pending 'need to hook in at a different level'
-
       expect(last_event.data).to include(
         'db.error' => 'ActiveRecord::RecordInvalid',
         'db.error_detail' => /TODO/,

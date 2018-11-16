@@ -21,8 +21,10 @@ module ActiveRecord
       real_connection = ::ActiveRecord::Base.send(spec.adapter_method, spec.config)
       logger.debug "#{log_prefix} obtained real database connection: #{real_connection.class.name}" if logger
 
-      unless real_connection.class.ancestors.include? ConnectionAdapters::HoneycombAdapter
-        real_connection.class.include ConnectionAdapters::HoneycombAdapter
+      if real_connection.class.ancestors.include? ConnectionAdapters::HoneycombAdapter
+        logger.debug "#{log_prefix} found #{real_connection.class} with #{ConnectionAdapters::HoneycombAdapter} already included"
+      else
+        real_connection.class.prepend ConnectionAdapters::HoneycombAdapter
       end
 
       real_connection
@@ -36,7 +38,7 @@ module ActiveRecord
         attr_reader :builder
         attr_accessor :logger
 
-        def included(klazz)
+        def prepended(klazz)
           debug "included into #{klazz.name}"
 
           if @client
@@ -65,32 +67,77 @@ module ActiveRecord
 
       delegate :builder, to: self
 
-      def execute(sql, *args)
-        sending_honeycomb_event do |event|
-          event.add_field 'db.sql', sql
-
-          adding_span_metadata_if_available(event, :statement) do
+      def execute(sql, name = nil, *args)
+        sending_honeycomb_event(sql, name, []) do |event|
+          adding_span_metadata_if_available(event) do
             super
           end
         end
       end
 
-      def exec_query(sql, *args)
-        sending_honeycomb_event do |event|
-          event.add_field 'db.sql', sql
-          event.add_field 'name', query_name(sql)
+      def exec_query(sql, name = 'SQL', binds = [], *args)
+        sending_honeycomb_event(sql, name, binds) do |event|
+          adding_span_metadata_if_available(event) do
+            super
+          end
+        end
+      end
 
-          adding_span_metadata_if_available(event, :query) do
+      def exec_insert(sql, name, binds, *args)
+        sending_honeycomb_event(sql, name, binds) do |event|
+          adding_span_metadata_if_available(event) do
+            super
+          end
+        end
+      end
+
+      def exec_delete(sql, name, binds = [], *args)
+        sending_honeycomb_event(sql, name, binds) do |event|
+          adding_span_metadata_if_available(event) do
+            super
+          end
+        end
+      end
+
+      def exec_update(sql, name, binds = [], *args)
+        sending_honeycomb_event(sql, name, binds) do |event|
+          adding_span_metadata_if_available(event) do
             super
           end
         end
       end
 
       private
-      def sending_honeycomb_event
-        event = builder.event
+      def sending_honeycomb_event(sql, name, binds)
+        # Some adapters have some of their exec* methods call each other,
+        # e.g mysql2 has exec_query call execute (via execute_and_free).
+        # We don't want to send two events for the same query, so we screen out
+        # multiple invocations of this wrapper method in the same call tree.
+        if !defined?(@honeycomb_event_depth)
+          @honeycomb_event_depth = 0
+        end
+        if @honeycomb_event_depth < 1
+          @honeycomb_event_depth = 1
+          event = builder.event
 
-        start = Time.now
+          event.add_field 'db.sql', sql
+          event.add_field 'name', name || query_name(sql)
+
+          binds.each do |bind|
+            # ActiveRecord 5
+            if bind.respond_to?(:value) && bind.respond_to?(:name)
+              event.add_field "db.params.#{bind.name}", bind.value
+            else # ActiveRecord 4
+              column, value = bind
+              event.add_field "db.params.#{column.name}", value
+            end
+          end
+
+          start = Time.now
+        else
+          @honeycomb_event_depth += 1
+        end
+
         yield event
       rescue Exception => e
         if event
@@ -99,6 +146,7 @@ module ActiveRecord
         end
         raise
       ensure
+        @honeycomb_event_depth -= 1
         if start && event
           finish = Time.now
           duration = finish - start
@@ -111,8 +159,8 @@ module ActiveRecord
         sql.sub(/\s+.*/, '').upcase
       end
 
-      def adding_span_metadata_if_available(event, name)
-        return yield unless defined?(::Honeycomb.trace_id)
+      def adding_span_metadata_if_available(event)
+        return yield unless event && defined?(::Honeycomb.trace_id)
 
         trace_id = ::Honeycomb.trace_id
 

@@ -4,6 +4,9 @@ require 'rspec/core/rake_task'
 require 'yaml'
 require 'yard'
 
+$LOAD_PATH << "#{File.dirname(__FILE__)}/spec"
+require 'support/db'
+
 $db_dir = 'spec/db'
 
 YARD::Rake::YardocTask.new(:doc)
@@ -13,7 +16,8 @@ namespace :spec do
     include ActiveRecord::Tasks
 
     task :config do
-      db_config = YAML.load_file("#$db_dir/config.yml")
+      # set DB_ADAPTER environment variable to specify which DB adapter to test
+      db_config = TestDB.config
 
       DatabaseTasks.database_configuration = db_config
       DatabaseTasks.env = 'test'
@@ -22,12 +26,12 @@ namespace :spec do
       ActiveRecord::Base.configurations = db_config
     end
 
-    desc 'Create the test database file'
+    desc 'Create the test database'
     task create: :config do
       DatabaseTasks.create_current
     end
 
-    desc 'Delete the test database file'
+    desc 'Delete the test database'
     task drop: :config do
       DatabaseTasks.drop_current
     end
