@@ -9,6 +9,9 @@ RSpec.shared_examples_for 'records a database query' do |name:, preceding_events
   end
 
   it "sets 'name' to #{name.inspect}" do
+    if ActiveRecord.version < Gem::Version.new("5")
+      pending 'depends on underlying adapter API?'
+    end
     expect(last_event.data['name']).to eq(name)
   end
 
