@@ -83,6 +83,14 @@ module ActiveRecord
         end
       end
 
+      def exec_insert(sql, name, binds, *args)
+        sending_honeycomb_event(sql, name, binds) do |event|
+          adding_span_metadata_if_available(event) do
+            super
+          end
+        end
+      end
+
       def exec_delete(sql, name, binds = [], *args)
         sending_honeycomb_event(sql, name, binds) do |event|
           adding_span_metadata_if_available(event) do
@@ -116,7 +124,13 @@ module ActiveRecord
           event.add_field 'name', name || query_name(sql)
 
           binds.each do |bind|
-            event.add_field "db.params.#{bind.name}", bind.value
+            # ActiveRecord 5
+            if bind.respond_to?(:value) && bind.respond_to?(:name)
+              event.add_field "db.params.#{bind.name}", bind.value
+            else # ActiveRecord 4
+              column, value = bind
+              event.add_field "db.params.#{column.name}", value
+            end
           end
 
           start = Time.now

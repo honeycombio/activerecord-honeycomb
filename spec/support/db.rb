@@ -28,7 +28,7 @@ module TestDB
     end
 
     def disconnect
-      @connection_pool.disconnect
+      @connection_pool.disconnect!
     end
   end
 end

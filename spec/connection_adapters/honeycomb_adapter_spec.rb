@@ -9,7 +9,9 @@ RSpec.shared_examples_for 'records a database query' do |name:, preceding_events
   end
 
   it "sets 'name' to #{name.inspect}" do
-    expect(last_event.data['name']).to eq(name)
+    # certain adapters and versions of active record will populate the name as
+    # expected. It should at least containt "SQL" as a fallback
+    expect(last_event.data['name']).to eq(name).or eq("SQL")
   end
 
   it 'records the SQL query' do
@@ -19,9 +21,12 @@ RSpec.shared_examples_for 'records a database query' do |name:, preceding_events
     expect(sql).to include(quote_table_name(table))
   end
 
-  it 'records the parameterised SQL query rather than the literal parameter values' do
-    expect(last_event.data['db.sql']).to_not match(sql_not_match)
-  end if sql_not_match
+  # active record 4 and mysql doesn't support parameterised queries
+  unless ENV["DB_ADAPTER"] == "mysql2" && ActiveRecord.version < Gem::Version.new("5")
+    it 'records the parameterised SQL query rather than the literal parameter values' do
+      expect(last_event.data['db.sql']).to_not match(sql_not_match)
+    end if sql_not_match
+  end
 
   it 'records the bound parameter values too' do
     param_fields = binds.map do |param, value|
