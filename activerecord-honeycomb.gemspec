@@ -14,7 +14,7 @@ Gem::Specification.new do |gem|
   gem.authors = ['Sam Stokes']
   gem.email = %w(support@honeycomb.io)
   gem.homepage = 'https://github.com/honeycombio/activerecord-honeycomb'
-  gem.license = 'MIT'
+  gem.license = 'Apache-2.0'
 
   gem.add_dependency 'libhoney'
 
