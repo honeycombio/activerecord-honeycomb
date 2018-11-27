@@ -51,6 +51,7 @@ module ActiveRecord
           end
 
           @builder = @client.builder.add(
+            'type' => 'db',
             'meta.package' => 'activerecord',
             'meta.package_version' => ActiveRecord::VERSION::STRING,
           )
