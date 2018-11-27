@@ -1,4 +1,8 @@
 RSpec.shared_examples_for 'records a database query' do |name:, preceding_events: 0, sql_match:, table:, sql_not_match: nil, binds: {}|
+  it 'sends a db event' do
+    expect(last_event.data['type']).to eq('db')
+  end
+
   it 'sends just one event' do
     expect($fakehoney.events.size).to eq(preceding_events + 1),
       "expected exactly one event, got: #{$fakehoney.events.drop(preceding_events).map {|event| event.data['name'] }.join(', ')}"
