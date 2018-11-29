@@ -85,7 +85,7 @@ module ActiveRecord
 
       def exec_insert(sql, name, binds, *args)
         sending_honeycomb_event(sql, name, binds) do |event|
-          adding_span_metadata_if_available(event) do
+          with_tracing_if_available(event) do
             super
           end
         end
