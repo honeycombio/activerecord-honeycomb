@@ -69,7 +69,7 @@ module ActiveRecord
 
       def execute(sql, name = nil, *args)
         sending_honeycomb_event(sql, name, []) do |event|
-          adding_span_metadata_if_available(event) do
+          with_tracing_if_available(event) do
             super
           end
         end
@@ -77,7 +77,7 @@ module ActiveRecord
 
       def exec_query(sql, name = 'SQL', binds = [], *args)
         sending_honeycomb_event(sql, name, binds) do |event|
-          adding_span_metadata_if_available(event) do
+          with_tracing_if_available(event) do
             super
           end
         end
@@ -85,7 +85,7 @@ module ActiveRecord
 
       def exec_insert(sql, name, binds, *args)
         sending_honeycomb_event(sql, name, binds) do |event|
-          adding_span_metadata_if_available(event) do
+          with_tracing_if_available(event) do
             super
           end
         end
@@ -93,7 +93,7 @@ module ActiveRecord
 
       def exec_delete(sql, name, binds = [], *args)
         sending_honeycomb_event(sql, name, binds) do |event|
-          adding_span_metadata_if_available(event) do
+          with_tracing_if_available(event) do
             super
           end
         end
@@ -101,7 +101,7 @@ module ActiveRecord
 
       def exec_update(sql, name, binds = [], *args)
         sending_honeycomb_event(sql, name, binds) do |event|
-          adding_span_metadata_if_available(event) do
+          with_tracing_if_available(event) do
             super
           end
         end
@@ -159,17 +159,32 @@ module ActiveRecord
         sql.sub(/\s+.*/, '').upcase
       end
 
-      def adding_span_metadata_if_available(event)
-        return yield unless event && defined?(::Honeycomb.trace_id)
+      def with_tracing_if_available(event)
+        # return if we are not using the ruby beeline
+        return yield unless event && defined?(::Honeycomb)
 
-        trace_id = ::Honeycomb.trace_id
+        # beeline version <= 0.5.0
+        if ::Honeycomb.respond_to? :trace_id
+          trace_id = ::Honeycomb.trace_id
+          event.add_field 'trace.trace_id', trace_id if trace_id
+          span_id = SecureRandom.uuid
+          event.add_field 'trace.span_id', span_id
 
-        event.add_field 'trace.trace_id', trace_id if trace_id
-        span_id = SecureRandom.uuid
-        event.add_field 'trace.span_id', span_id
-
-        ::Honeycomb.with_span_id(span_id) do |parent_span_id|
-          event.add_field 'trace.parent_id', parent_span_id
+          ::Honeycomb.with_span_id(span_id) do |parent_span_id|
+            event.add_field 'trace.parent_id', parent_span_id
+            yield
+          end
+        # beeline version > 0.5.0
+        elsif ::Honeycomb.respond_to? :span_for_existing_event
+          ::Honeycomb.span_for_existing_event(
+            event,
+            name: nil, # leave blank since we set it above
+            type: 'db',
+          ) do
+            yield
+          end
+        # fallback if we don't detect any known beeline tracing methods
+        else
           yield
         end
       end
