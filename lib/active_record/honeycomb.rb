@@ -26,8 +26,16 @@ module ActiveRecord
         # we can munge it: see
         # https://github.com/rails/rails/blob/9700dac/activerecord/lib/active_record/connection_handling.rb#L56-L57
 
-        resolver = ::ActiveRecord::ConnectionAdapters::ConnectionSpecification::Resolver.new(::ActiveRecord::Base.configurations)
-        resolver.resolve(config)
+        resolver_class = ::ActiveRecord::ConnectionAdapters::ConnectionSpecification::Resolver
+
+        case resolver_class.instance_method(:initialize).arity
+        when 1
+          resolver = ::ActiveRecord::ConnectionAdapters::ConnectionSpecification::Resolver.new(::ActiveRecord::Base.configurations)
+          resolver.resolve(config)
+        when 2
+          resolver = ::ActiveRecord::ConnectionAdapters::ConnectionSpecification::Resolver.new(config, ::ActiveRecord::Base.configurations)
+          resolver.spec
+        end
       end
     end
   end
