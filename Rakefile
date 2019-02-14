@@ -38,7 +38,7 @@ namespace :spec do
 
     desc 'Set up the test database from schema.rb'
     task load_schema: :config do
-      if DatabaseTasks.respond_to? :load_schema_current?
+      if DatabaseTasks.respond_to? :load_schema_current
         DatabaseTasks.load_schema_current(:ruby, nil)
       else
         DatabaseTasks.load_schema(:ruby, nil)
