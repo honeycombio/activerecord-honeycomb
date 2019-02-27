@@ -1,4 +1,5 @@
 require 'active_record'
+require 'active_support/backtrace_cleaner'
 require 'securerandom'
 
 module ActiveRecord
@@ -121,6 +122,7 @@ module ActiveRecord
           event = builder.event
 
           event.add_field 'db.sql', sql
+          event.add_field 'db.query_source', extract_query_source_location(caller)
           event.add_field 'name', name || query_name(sql)
 
           binds.each do |bind|
@@ -187,6 +189,24 @@ module ActiveRecord
         else
           yield
         end
+      end
+
+      def extract_query_source_location(locations)
+        backtrace_cleaner.clean(locations).first
+      end
+
+      def backtrace_cleaner
+        @backtrace_cleaner ||=
+          if defined?(Rails)
+            Rails.backtrace_cleaner
+          else
+            ActiveSupport::BacktraceCleaner.new.tap do |cleaner|
+              # Ignore ourselves
+              cleaner.add_silencer { |l| l.include?(__FILE__) }
+              # Ignore activerecord
+              cleaner.add_silencer { |l| l.include?("activerecord") }
+            end
+          end
       end
     end
   end
