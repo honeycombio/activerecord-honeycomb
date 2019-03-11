@@ -24,7 +24,7 @@ Gem::Specification.new do |gem|
   gem.add_development_dependency 'rspec'
   gem.add_development_dependency 'mysql2'
   gem.add_development_dependency 'pg'
-  gem.add_development_dependency 'sqlite3', '~> 1.3', '>= 1.3.6'
+  gem.add_development_dependency 'sqlite3', '~> 1.3.0'
   gem.add_development_dependency 'yard'
 
   gem.required_ruby_version = '>= 2.2.0'
