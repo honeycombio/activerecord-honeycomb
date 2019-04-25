@@ -6,6 +6,8 @@ module ActiveRecord
       def munge_config(config, client: nil, logger: nil)
         config = resolve_config(config)
 
+        return config if config.key?('real_adapter') || config.key?(:real_adapter)
+
         munged = config.merge(
           'adapter' => 'honeycomb',
           'real_adapter' => config.fetch('adapter'),
