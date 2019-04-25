@@ -21,6 +21,12 @@ RSpec.shared_examples_for 'records a database query' do |name:, preceding_events
     expect(sql).to include(quote_table_name(table))
   end
 
+  it 'records the SQL query source' do
+    expect(last_event.data).to include('db.caller')
+    source = last_event.data['db.caller']
+    expect(source).to match(/\w+\.rb:\d+:in `\w+'/)
+  end
+
   # active record 4 and mysql doesn't support parameterised queries
   unless ENV["DB_ADAPTER"] == "mysql2" && ActiveRecord.version < Gem::Version.new("5")
     it 'records the parameterised SQL query rather than the literal parameter values' do
