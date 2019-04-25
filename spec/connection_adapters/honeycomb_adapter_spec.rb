@@ -22,8 +22,8 @@ RSpec.shared_examples_for 'records a database query' do |name:, preceding_events
   end
 
   it 'records the SQL query source' do
-    expect(last_event.data).to include('db.query_source')
-    source = last_event.data['db.query_source']
+    expect(last_event.data).to include('db.caller')
+    source = last_event.data['db.caller']
     expect(source).to match(/\w+\.rb:\d+:in `\w+'/)
   end
 

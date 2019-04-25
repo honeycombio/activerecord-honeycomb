@@ -122,7 +122,7 @@ module ActiveRecord
           event = builder.event
 
           event.add_field 'db.sql', sql
-          event.add_field 'db.query_source', extract_query_source_location(caller)
+          event.add_field 'db.caller', extract_query_source_location(caller)
           event.add_field 'name', name || query_name(sql)
 
           binds.each do |bind|
