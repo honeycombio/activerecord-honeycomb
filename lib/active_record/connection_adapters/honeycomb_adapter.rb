@@ -131,7 +131,11 @@ module ActiveRecord
               event.add_field "db.params.#{bind.name}", bind.value
             else # ActiveRecord 4
               column, value = bind
-              event.add_field "db.params.#{column.name}", value
+              if column.respond_to?(:name)
+                event.add_field "db.params.#{column.name}", value
+              else
+                event.add_field "db.params.#{column}", value
+              end
             end
           end
 
